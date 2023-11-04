@@ -5,7 +5,7 @@
 import UIKit
 
 // The Task model
-struct Task {
+struct Task: Codable {
 
     // The task's title
     var title: String
@@ -22,8 +22,10 @@ struct Task {
         self.title = title
         self.note = note
         self.dueDate = dueDate
+        
     }
-
+    
+    
     // A boolean to determine if the task has been completed. Defaults to `false`
     var isComplete: Bool = false {
 
@@ -44,10 +46,10 @@ struct Task {
 
     // The date the task was created
     // This property is set as the current date whenever the task is initially created.
-    let createdDate: Date = Date()
+    var createdDate: Date = Date()
 
     // An id (Universal Unique Identifier) used to identify a task.
-    let id: String = UUID().uuidString
+    var id: String = UUID().uuidString
 }
 
 // MARK: - Task + UserDefaults
@@ -56,14 +58,38 @@ extension Task {
 
     // Given an array of tasks, encodes them to data and saves to UserDefaults.
     static func save(_ tasks: [Task]) {
+        let jsonEncoder = JSONEncoder()
 
-        // TODO: Save the array of tasks
+               do {
+                   let tasksData = try jsonEncoder.encode(tasks)
+
+                   let key = "tasksKey"
+
+                   UserDefaults.standard.set(tasksData, forKey: key)
+                   UserDefaults.standard.synchronize()
+
+                   print("Tasks encoded and saved to UserDefaults.")
+               } catch {
+                   // Handle encoding errors, if any
+                   print("Error encoding tasks: \(error)")
+               }
     }
 
     // Retrieve an array of saved tasks from UserDefaults.
     static func getTasks() -> [Task] {
         
-        // TODO: Get the array of saved tasks from UserDefaults
+        let key = "tasksKey"
+
+               if let tasksData = UserDefaults.standard.data(forKey: key) {
+                   let jsonDecoder = JSONDecoder()
+                   do {
+                       let tasks = try jsonDecoder.decode([Task].self, from: tasksData)
+                       return tasks
+                   } catch {
+                       // Handle decoding errors, if any
+                       print("Error decoding tasks: \(error)")
+                   }
+               }
 
         return [] // 👈 replace with returned saved tasks
     }
@@ -71,6 +97,14 @@ extension Task {
     // Add a new task or update an existing task with the current task.
     func save() {
 
-        // TODO: Save the current task
+        var tasks = Task.getTasks()
+           if let existingTaskIndex = tasks.firstIndex(where: { $0.id == self.id }) {
+               tasks.remove(at: existingTaskIndex)
+               tasks.insert(self, at: existingTaskIndex)
+           } else {
+               tasks.append(self)
+           }
+        
+           Task.save(tasks)
     }
 }
